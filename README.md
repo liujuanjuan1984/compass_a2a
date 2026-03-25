@@ -103,6 +103,27 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
+Build and smoke test release artifacts locally:
+
+```bash
+uv build --no-sources
+bash ./scripts/smoke_test_built_cli.sh dist/compass_a2a-*.whl
+bash ./scripts/smoke_test_built_cli.sh dist/compass_a2a-*.tar.gz
+```
+
+## Release
+
+`compass_a2a` uses tag-driven releases.
+
+- Merge the release-ready commit into `master`
+- Create and push a version tag in the form `vX.Y.Z`
+- The publish workflow will only proceed when the tag commit is reachable from `origin/master`
+- The workflow builds artifacts, verifies that the package version matches the tag, publishes to PyPI, and creates a GitHub Release
+
+PyPI publishing is configured for GitHub OIDC trusted publishing. The PyPI
+project must trust this repository and the `publish.yml` workflow before the
+first release can succeed.
+
 ## Roadmap
 
 This bootstrap intentionally keeps the runtime thin. The next steps are expected
