@@ -11,6 +11,13 @@ from a2a.types import (
 )
 
 from .config import Settings
+from .skills import (
+    SKILL_REVIEW_FINANCE_STATE,
+    SKILL_REVIEW_PLANNING,
+    SKILL_REVIEW_TIME_AND_ACTIVITY,
+    SKILL_REVIEW_VISION_FOCUS,
+    SKILL_SEARCH_PERSONAL_KNOWLEDGE,
+)
 
 
 def build_agent_card(settings: Settings) -> AgentCard:
@@ -42,19 +49,68 @@ def build_agent_card(settings: Settings) -> AgentCard:
         default_output_modes=["text/plain"],
         skills=[
             AgentSkill(
-                id="compass_adapter_chat",
-                name="Compass Adapter Chat",
+                id=SKILL_REVIEW_TIME_AND_ACTIVITY,
+                name="Review Time And Activity",
                 description=(
-                    "Bootstrap skill for Compass adapter interactions. "
-                    "It accepts text requests and returns Compass-oriented adapter responses."
+                    "Review time and activity context by routing through "
+                    "Compass timelog agentic exports."
                 ),
-                tags=["compass", "a2a", "adapter", "lifeos"],
+                tags=["compass", "timelog", "review", "activity"],
                 examples=[
-                    "Summarize today's Compass context.",
-                    "Prepare a Compass adapter task for timelog review.",
+                    "Review today's time and activity context.",
+                    "Summarize recent timelog activity for the last 3 days.",
                 ],
                 security=[{"basicAuth": []}],
-            )
+            ),
+            AgentSkill(
+                id=SKILL_SEARCH_PERSONAL_KNOWLEDGE,
+                name="Search Personal Knowledge",
+                description="Search personal knowledge through Compass notes agentic exports.",
+                tags=["compass", "notes", "knowledge", "search"],
+                examples=[
+                    "Search my notes for recent mentions of A2A.",
+                    "Summarize the notes related to planning.",
+                ],
+                security=[{"basicAuth": []}],
+            ),
+            AgentSkill(
+                id=SKILL_REVIEW_PLANNING,
+                name="Review Planning",
+                description=(
+                    "Review day, week, month, or year planning through Compass planning exports."
+                ),
+                tags=["compass", "planning", "review", "tasks"],
+                examples=[
+                    "Show the day plan for today.",
+                    "Review the week plan with notes included.",
+                ],
+                security=[{"basicAuth": []}],
+            ),
+            AgentSkill(
+                id=SKILL_REVIEW_FINANCE_STATE,
+                name="Review Finance State",
+                description=(
+                    "Review finance state via Compass finance agentic exports "
+                    "for accounts, cashflow, or trading."
+                ),
+                tags=["compass", "finance", "accounts", "cashflow", "trading"],
+                examples=[
+                    "Show the finance account tree summary.",
+                    "Review recent cashflow.",
+                ],
+                security=[{"basicAuth": []}],
+            ),
+            AgentSkill(
+                id=SKILL_REVIEW_VISION_FOCUS,
+                name="Review Vision Focus",
+                description="Review a vision with related subtasks, notes, and time records.",
+                tags=["compass", "vision", "planning", "focus"],
+                examples=[
+                    "Review one vision with its subtasks.",
+                    "Load a vision summary with notes excluded.",
+                ],
+                security=[{"basicAuth": []}],
+            ),
         ],
         security_schemes={
             "basicAuth": SecurityScheme(

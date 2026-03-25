@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Protocol
+
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import (
@@ -13,12 +15,19 @@ from a2a.types import (
     TextPart,
 )
 
+from .compass_gateway import CompassGatewayError
 from .config import Settings
+from .skills import parse_skill_invocation, render_skill_help
+
+
+class SkillGateway(Protocol):
+    async def invoke(self, skill: str, arguments: dict[str, object]) -> str: ...
 
 
 class CompassAdapterExecutor(AgentExecutor):
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, gateway: SkillGateway) -> None:
         self._settings = settings
+        self._gateway = gateway
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         task_id = context.task_id or "compass-task"
@@ -43,12 +52,28 @@ class CompassAdapterExecutor(AgentExecutor):
             )
         )
 
-        response_text = (
-            f"Compass adapter bootstrap received: {user_input}\n\n"
-            f"Authenticated identity: {identity}\n"
-            f"Compass base URL: {self._settings.compass_base_url}\n"
-            "Next step: replace this bootstrap executor with real Compass domain orchestration."
-        )
+        invocation = parse_skill_invocation(metadata=context.metadata, user_input=user_input)
+        if invocation is None:
+            response_text = (
+                f"Authenticated identity: {identity}\n"
+                f"Compass API base URL: {self._settings.compass_api_base_url}\n\n"
+                f"{render_skill_help()}"
+            )
+            final_state = TaskState.completed
+        else:
+            try:
+                content = await self._gateway.invoke(invocation.skill, invocation.arguments)
+                response_text = (
+                    f"Skill: {invocation.skill}\nAuthenticated identity: {identity}\n\n{content}"
+                )
+                final_state = TaskState.completed
+            except CompassGatewayError as exc:
+                response_text = (
+                    f"Skill: {invocation.skill}\n"
+                    f"Authenticated identity: {identity}\n\n"
+                    f"Compass gateway error: {exc}"
+                )
+                final_state = TaskState.failed
 
         await event_queue.enqueue_event(
             TaskArtifactUpdateEvent(
@@ -75,7 +100,7 @@ class CompassAdapterExecutor(AgentExecutor):
                 context_id=context_id,
                 final=True,
                 status=TaskStatus(
-                    state=TaskState.completed,
+                    state=final_state,
                     message=completed_message,
                 ),
             )

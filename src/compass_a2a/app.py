@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 
 from .agent_card import build_agent_card
 from .auth import add_basic_auth_middleware
+from .compass_gateway import CompassGateway
 from .config import Settings
 from .executor import CompassAdapterExecutor
 
@@ -22,11 +23,15 @@ class IdentityAwareCallContextBuilder(DefaultCallContextBuilder):
         return context
 
 
-def build_app(settings: Settings | None = None) -> FastAPI:
+def build_app(
+    settings: Settings | None = None,
+    gateway: CompassGateway | None = None,
+) -> FastAPI:
     settings = settings or Settings()
     agent_card = build_agent_card(settings)
+    gateway = gateway or CompassGateway(settings)
     handler = DefaultRequestHandler(
-        agent_executor=CompassAdapterExecutor(settings),
+        agent_executor=CompassAdapterExecutor(settings, gateway),
         task_store=InMemoryTaskStore(),
     )
     context_builder = IdentityAwareCallContextBuilder()

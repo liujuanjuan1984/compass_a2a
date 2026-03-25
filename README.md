@@ -61,6 +61,41 @@ Environment variables:
 The authenticated username is propagated into the request context so later
 Compass-facing logic can apply user-aware routing and policy.
 
+## Compass Bootstrap Skills
+
+The current branch exposes a small bootstrap skill catalog while internally
+using Compass `/agentic/*` facade endpoints as the initial data source.
+
+- `review_time_and_activity`
+- `search_personal_knowledge`
+- `review_planning`
+- `review_finance_state`
+- `review_vision_focus`
+
+Recommended invocation style is metadata-driven:
+
+```json
+{
+  "compass": {
+    "skill": "review_planning",
+    "arguments": {
+      "view_type": "day",
+      "selected_date": "2026-03-25T00:00:00Z",
+      "include_notes": true
+    }
+  }
+}
+```
+
+For quick manual testing, slash-style text commands also work:
+
+```text
+/review_time_and_activity {"start_date":"2026-03-25T00:00:00Z","end_date":"2026-03-25T23:59:59Z"}
+```
+
+These Compass endpoints are treated as an internal bootstrap gateway, not as
+the long-term external A2A contract.
+
 ## Development
 
 Run checks:

@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     auth_username: str = "compass"
     auth_password: str = "compass"
 
-    compass_base_url: str = "http://127.0.0.1:8080"
+    compass_api_base_url: str = "http://127.0.0.1:8000/api/v1"
+    compass_email: str | None = None
+    compass_password: str | None = None
+    default_locale: str = "zh-CN"
     protocol_version: str = "0.3.0"
     adapter_version: str = "0.1.0"
 
