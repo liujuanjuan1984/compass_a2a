@@ -20,26 +20,25 @@ This repository is initialized with:
 
 ## Quick Start
 
-Install and run from a release with `uv tool`:
+Install
 
 ```bash
 uv tool install compass-a2a
-compass-a2a
 ```
 
-Use this complete command to run:
-
-```bash
-A2A_HOST=127.0.0.1 \
-A2A_PORT=8000 \
-A2A_PUBLIC_URL=http://127.0.0.1:8000 \
-compass-a2a
-```
-
-`uv tool upgrade` can be used to keep the installed tool up to date:
+Upgrade
 
 ```bash
 uv tool upgrade compass-a2a
+```
+
+Run (complete example)
+
+```bash
+ A2A_HOST=127.0.0.1 \
+ A2A_PORT=8000 \
+ A2A_PUBLIC_URL=http://127.0.0.1:8000 \
+compass-a2a
 ```
 
 Public endpoints:
