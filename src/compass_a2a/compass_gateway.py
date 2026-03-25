@@ -94,9 +94,15 @@ class CompassGateway:
         async with httpx.AsyncClient(
             base_url=self._settings.compass_api_base_url, timeout=30.0
         ) as client:
-            response = await client.request(method, path, json=json, params=params, headers=headers)
+            response = await client.request(
+                method,
+                path,
+                json=json,
+                params=params,
+                headers=headers,
+            )
             if response.status_code == 401:
-                token = await self._refresh_access_token()
+                token = await self._refresh_access_token(force=True)
                 headers["Authorization"] = f"Bearer {token}"
                 response = await client.request(
                     method, path, json=json, params=params, headers=headers
@@ -117,7 +123,7 @@ class CompassGateway:
             return self._access_token
         return await self._refresh_access_token()
 
-    async def _refresh_access_token(self) -> str:
+    async def _refresh_access_token(self, *, force: bool = False) -> str:
         if not self._settings.compass_email or not self._settings.compass_password:
             raise CompassGatewayError(
                 "Compass credentials are not configured. Set "
@@ -125,8 +131,11 @@ class CompassGateway:
             )
 
         async with self._login_lock:
-            if self._access_token:
+            if self._access_token and not force:
                 return self._access_token
+
+            if force:
+                self._access_token = None
 
             payload = {
                 "email": self._settings.compass_email,
