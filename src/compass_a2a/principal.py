@@ -9,6 +9,7 @@ class CompassPrincipal:
     username: str
     password: str = field(repr=False)
     access_token: str | None = field(default=None, repr=False)
+    access_token_expires_at: float | None = field(default=None, repr=False)
 
     @property
     def identity(self) -> str:
