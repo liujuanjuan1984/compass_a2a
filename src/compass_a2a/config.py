@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "compass_a2a"
+    app_name: str = "compass-a2a"
     host: str = "127.0.0.1"
     port: int = 8000
     public_url: str = "http://127.0.0.1:8000"

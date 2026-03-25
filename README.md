@@ -1,11 +1,11 @@
-# compass_a2a
+# compass-a2a
 
-`compass_a2a` is the dedicated A2A adapter service for Compass.
+`compass-a2a` is the dedicated A2A adapter service for Compass.
 
 It is intentionally positioned as a separate process boundary:
 
 - Compass stays the source of truth for LifeOS data and domain rules.
-- `compass_a2a` exposes an A2A-facing runtime surface for hub and peer agents.
+- `compass-a2a` exposes an A2A-facing runtime surface for hub and peer agents.
 - The adapter can evolve independently from Compass internals.
 
 ## Bootstrap Scope
@@ -91,7 +91,7 @@ For quick manual testing, slash-style text commands also work:
 
 These Compass endpoints are treated as an internal bootstrap gateway, not as
 the long-term external A2A contract. Authentication is also bridged through
-Compass itself, so `compass_a2a` remains a thin protocol and policy layer.
+Compass itself, so `compass-a2a` remains a thin protocol and policy layer.
 
 ## Development
 
@@ -113,7 +113,7 @@ bash ./scripts/smoke_test_built_cli.sh dist/compass_a2a-*.tar.gz
 
 ## Release
 
-`compass_a2a` uses tag-driven releases.
+`compass-a2a` uses tag-driven releases.
 
 - Merge the release-ready commit into `master`
 - Create and push a version tag in the form `vX.Y.Z`

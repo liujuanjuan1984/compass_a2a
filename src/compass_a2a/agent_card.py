@@ -23,7 +23,7 @@ from .skills import (
 def build_agent_card(settings: Settings) -> AgentCard:
     base_url = settings.public_url.rstrip("/")
     return AgentCard(
-        name="Compass A2A Adapter",
+        name="compass-a2a",
         description=(
             "A thin A2A adapter service for Compass. "
             "It exposes Compass-oriented capabilities through an authenticated "
@@ -39,7 +39,7 @@ def build_agent_card(settings: Settings) -> AgentCard:
         ],
         provider=AgentProvider(
             organization="liujuanjuan1984",
-            url="https://github.com/liujuanjuan1984/compass_a2a",
+            url="https://github.com/liujuanjuan1984/compass-a2a",
         ),
         capabilities=AgentCapabilities(
             streaming=True,

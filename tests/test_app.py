@@ -65,7 +65,7 @@ def test_agent_card_is_public_and_declares_basic_auth() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["name"] == "Compass A2A Adapter"
+    assert payload["name"] == "compass-a2a"
     assert payload["securitySchemes"]["basicAuth"]["scheme"] == "Basic"
     skill_ids = {skill["id"] for skill in payload["skills"]}
     assert SKILL_REVIEW_PLANNING in skill_ids
