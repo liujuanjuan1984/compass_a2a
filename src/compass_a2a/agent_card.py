@@ -26,7 +26,8 @@ def build_agent_card(settings: Settings) -> AgentCard:
         name="Compass A2A Adapter",
         description=(
             "A thin A2A adapter service for Compass. "
-            "It exposes Compass-oriented capabilities through an authenticated A2A surface."
+            "It exposes Compass-oriented capabilities through an authenticated "
+            "A2A surface backed by Compass account credentials."
         ),
         url=base_url,
         version=settings.adapter_version,
@@ -116,7 +117,7 @@ def build_agent_card(settings: Settings) -> AgentCard:
             "basicAuth": SecurityScheme(
                 root=HTTPAuthSecurityScheme(
                     scheme="Basic",
-                    description="HTTP Basic authentication for adapter access.",
+                    description=("HTTP Basic authentication using Compass account credentials."),
                 )
             )
         },

@@ -16,14 +16,7 @@ This repository is initialized with:
 - `pre-commit` for basic code quality checks
 - a minimal A2A server surface
 - a public agent card endpoint
-- HTTP Basic authentication for runtime access
-
-The initial bootstrap account is:
-
-- username: `compass`
-- password: `compass`
-
-Override them in the environment before production use.
+- HTTP Basic authentication bridged to Compass account credentials
 
 ## Quick Start
 
@@ -53,13 +46,13 @@ Protected endpoints:
 
 Runtime access uses HTTP Basic authentication.
 
-Environment variables:
+The adapter does not maintain its own account system. Instead, the Basic Auth
+username and password are treated as Compass login credentials. The current
+authenticated Compass identity is propagated into the request context so later
+Compass-facing logic can apply user-aware routing, token reuse, and policy.
 
-- `COMPASS_A2A_AUTH_USERNAME`
-- `COMPASS_A2A_AUTH_PASSWORD`
-
-The authenticated username is propagated into the request context so later
-Compass-facing logic can apply user-aware routing and policy.
+The Basic Auth username should match the Compass login identifier currently
+expected by Compass, which is typically the account email.
 
 ## Compass Bootstrap Skills
 
@@ -94,7 +87,8 @@ For quick manual testing, slash-style text commands also work:
 ```
 
 These Compass endpoints are treated as an internal bootstrap gateway, not as
-the long-term external A2A contract.
+the long-term external A2A contract. Authentication is also bridged through
+Compass itself, so `compass_a2a` remains a thin protocol and policy layer.
 
 ## Development
 

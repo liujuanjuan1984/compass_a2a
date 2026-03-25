@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import base64
 import binascii
-import secrets
-from typing import Final
+from typing import Final, Protocol
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from .config import Settings
+from .compass_gateway import CompassGatewayError
+from .principal import CompassPrincipal
 
 _PUBLIC_PATHS: Final[set[str]] = {
     "/.well-known/agent-card.json",
     "/.well-known/agent.json",
     "/healthz",
 }
+
+
+class CompassAuthenticator(Protocol):
+    async def authenticate(self, principal: CompassPrincipal) -> CompassPrincipal: ...
 
 
 def _unauthorized_response() -> JSONResponse:
@@ -45,7 +49,7 @@ def _decode_basic_credentials(header_value: str) -> tuple[str, str] | None:
     return username, password
 
 
-def add_basic_auth_middleware(app: FastAPI, settings: Settings) -> None:
+def add_basic_auth_middleware(app: FastAPI, authenticator: CompassAuthenticator) -> None:
     @app.middleware("http")
     async def basic_auth_middleware(request: Request, call_next):
         if request.url.path in _PUBLIC_PATHS:
@@ -57,10 +61,15 @@ def add_basic_auth_middleware(app: FastAPI, settings: Settings) -> None:
             return _unauthorized_response()
 
         username, password = credentials
-        username_ok = secrets.compare_digest(username, settings.auth_username)
-        password_ok = secrets.compare_digest(password, settings.auth_password)
-        if not (username_ok and password_ok):
+        if not username or not password:
             return _unauthorized_response()
 
-        request.state.user_identity = username
+        principal = CompassPrincipal(username=username, password=password)
+        try:
+            principal = await authenticator.authenticate(principal)
+        except CompassGatewayError:
+            return _unauthorized_response()
+
+        request.state.user_identity = principal.identity
+        request.state.compass_principal = principal
         return await call_next(request)

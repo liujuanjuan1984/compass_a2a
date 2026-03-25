@@ -11,16 +11,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from a2a.types import Message, MessageSendParams, Role, SendMessageRequest, TextPart
 
 from compass_a2a.app import build_app
+from compass_a2a.compass_gateway import CompassGatewayError
 from compass_a2a.config import Settings
+from compass_a2a.principal import CompassPrincipal
 from compass_a2a.skills import SKILL_REVIEW_PLANNING
 
 
 class FakeGateway:
     def __init__(self) -> None:
-        self.calls: list[tuple[str, dict[str, object]]] = []
+        self.auth_calls: list[tuple[str, str]] = []
+        self.calls: list[tuple[str, dict[str, object], str]] = []
 
-    async def invoke(self, skill: str, arguments: dict[str, object]) -> str:
-        self.calls.append((skill, arguments))
+    async def authenticate(self, principal: CompassPrincipal) -> CompassPrincipal:
+        self.auth_calls.append((principal.username, principal.password))
+        if principal.password != "secret":
+            raise CompassGatewayError("invalid credentials")
+        principal.access_token = f"token:{principal.username}"
+        return principal
+
+    async def invoke(
+        self, skill: str, arguments: dict[str, object], principal: CompassPrincipal
+    ) -> str:
+        self.calls.append((skill, arguments, principal.identity))
         return f"gateway:{skill}"
 
 
@@ -29,14 +41,12 @@ def _auth_header(username: str, password: str) -> dict[str, str]:
     return {"Authorization": f"Basic {token}"}
 
 
-def _build_client() -> TestClient:
+def _build_client(gateway: FakeGateway | None = None) -> TestClient:
     settings = Settings(
-        auth_username="compass",
-        auth_password="compass",
         public_url="http://testserver",
         compass_api_base_url="http://compass.test/api/v1",
     )
-    return TestClient(build_app(settings, gateway=FakeGateway()))
+    return TestClient(build_app(settings, gateway=gateway or FakeGateway()))
 
 
 def test_healthz_is_public() -> None:
@@ -81,7 +91,8 @@ def test_jsonrpc_message_send_requires_auth() -> None:
 
 
 def test_jsonrpc_message_send_returns_completed_task_when_authenticated() -> None:
-    client = _build_client()
+    gateway = FakeGateway()
+    client = _build_client(gateway)
     request = SendMessageRequest(
         id="req-1",
         method="message/send",
@@ -97,7 +108,7 @@ def test_jsonrpc_message_send_returns_completed_task_when_authenticated() -> Non
     response = client.post(
         "/",
         json=request.model_dump(mode="json", by_alias=True),
-        headers=_auth_header("compass", "compass"),
+        headers=_auth_header("user@example.com", "secret"),
     )
 
     assert response.status_code == 200
@@ -105,13 +116,36 @@ def test_jsonrpc_message_send_returns_completed_task_when_authenticated() -> Non
     assert payload["result"]["status"]["state"] == "completed"
     response_text = payload["result"]["artifacts"][0]["parts"][0]["text"]
     assert "Available skills:" in response_text
+    assert "Authenticated identity: user@example.com" in response_text
+    assert gateway.auth_calls == [("user@example.com", "secret")]
+
+
+def test_jsonrpc_message_send_returns_unauthorized_for_invalid_compass_credentials() -> None:
+    client = _build_client()
+    request = SendMessageRequest(
+        id="req-invalid",
+        method="message/send",
+        params=MessageSendParams(
+            message=Message(
+                message_id="msg-invalid",
+                role=Role.user,
+                parts=[TextPart(text="hello compass")],
+            )
+        ),
+    )
+
+    response = client.post(
+        "/",
+        json=request.model_dump(mode="json", by_alias=True),
+        headers=_auth_header("user@example.com", "wrong-password"),
+    )
+
+    assert response.status_code == 401
 
 
 def test_jsonrpc_message_send_dispatches_skill_through_gateway_metadata() -> None:
     gateway = FakeGateway()
     settings = Settings(
-        auth_username="compass",
-        auth_password="compass",
         public_url="http://testserver",
         compass_api_base_url="http://compass.test/api/v1",
     )
@@ -137,11 +171,11 @@ def test_jsonrpc_message_send_dispatches_skill_through_gateway_metadata() -> Non
     response = client.post(
         "/",
         json=request.model_dump(mode="json", by_alias=True),
-        headers=_auth_header("compass", "compass"),
+        headers=_auth_header("user@example.com", "secret"),
     )
 
     assert response.status_code == 200
-    assert gateway.calls == [(SKILL_REVIEW_PLANNING, {"view_type": "day"})]
+    assert gateway.calls == [(SKILL_REVIEW_PLANNING, {"view_type": "day"}, "user@example.com")]
     payload = response.json()
     response_text = payload["result"]["artifacts"][0]["parts"][0]["text"]
     assert "gateway:review_planning" in response_text

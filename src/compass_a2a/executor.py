@@ -17,11 +17,14 @@ from a2a.types import (
 
 from .compass_gateway import CompassGatewayError
 from .config import Settings
+from .principal import CompassPrincipal
 from .skills import parse_skill_invocation, render_skill_help
 
 
 class SkillGateway(Protocol):
-    async def invoke(self, skill: str, arguments: dict[str, object]) -> str: ...
+    async def invoke(
+        self, skill: str, arguments: dict[str, object], principal: CompassPrincipal
+    ) -> str: ...
 
 
 class CompassAdapterExecutor(AgentExecutor):
@@ -33,7 +36,8 @@ class CompassAdapterExecutor(AgentExecutor):
         task_id = context.task_id or "compass-task"
         context_id = context.context_id or "compass-context"
         user_input = context.get_user_input().strip() or "No input provided."
-        identity = self._extract_identity(context)
+        principal = self._extract_principal(context)
+        identity = principal.identity if principal else "anonymous"
 
         working_message = self._build_agent_message(
             text="Compass adapter is processing the request.",
@@ -62,7 +66,13 @@ class CompassAdapterExecutor(AgentExecutor):
             final_state = TaskState.completed
         else:
             try:
-                content = await self._gateway.invoke(invocation.skill, invocation.arguments)
+                if principal is None:
+                    raise CompassGatewayError("Missing authenticated Compass principal")
+                content = await self._gateway.invoke(
+                    invocation.skill,
+                    invocation.arguments,
+                    principal,
+                )
                 response_text = (
                     f"Skill: {invocation.skill}\nAuthenticated identity: {identity}\n\n{content}"
                 )
@@ -127,12 +137,12 @@ class CompassAdapterExecutor(AgentExecutor):
         )
 
     @staticmethod
-    def _extract_identity(context: RequestContext) -> str:
+    def _extract_principal(context: RequestContext) -> CompassPrincipal | None:
         call_context = context.call_context
         if not call_context:
-            return "anonymous"
-        identity = call_context.state.get("identity")
-        return identity if isinstance(identity, str) and identity else "anonymous"
+            return None
+        principal = call_context.state.get("compass_principal")
+        return principal if isinstance(principal, CompassPrincipal) else None
 
     @staticmethod
     def _build_agent_message(*, text: str, context_id: str, message_id: str) -> Message:

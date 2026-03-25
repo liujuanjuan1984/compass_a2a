@@ -12,6 +12,7 @@ from .auth import add_basic_auth_middleware
 from .compass_gateway import CompassGateway
 from .config import Settings
 from .executor import CompassAdapterExecutor
+from .principal import CompassPrincipal
 
 
 class IdentityAwareCallContextBuilder(DefaultCallContextBuilder):
@@ -20,6 +21,9 @@ class IdentityAwareCallContextBuilder(DefaultCallContextBuilder):
         identity = getattr(request.state, "user_identity", None)
         if identity:
             context.state["identity"] = identity
+        principal = getattr(request.state, "compass_principal", None)
+        if isinstance(principal, CompassPrincipal):
+            context.state["compass_principal"] = principal
         return context
 
 
@@ -59,7 +63,7 @@ def build_app(
     for (path, method), callback in rest_adapter.routes().items():
         app.add_api_route(path, callback, methods=[method])
 
-    add_basic_auth_middleware(app, settings)
+    add_basic_auth_middleware(app, gateway)
     return app
 
 
