@@ -27,23 +27,12 @@ uv tool install compass-a2a
 compass-a2a
 ```
 
-By default, the service listens on `http://127.0.0.1:8000`, and the Agent Card URL
-is generated from the startup `host:port`.
-
-For a complete launch example:
+Use this complete command to run:
 
 ```bash
 A2A_HOST=127.0.0.1 \
 A2A_PORT=8000 \
-compass-a2a
-```
-
-If the service is exposed through a public endpoint, set `A2A_PUBLIC_URL` explicitly:
-
-```bash
-A2A_HOST=0.0.0.0 \
-A2A_PORT=8000 \
-A2A_PUBLIC_URL=http://public.example.com/compass-a2a \
+A2A_PUBLIC_URL=http://127.0.0.1:8000 \
 compass-a2a
 ```
 
