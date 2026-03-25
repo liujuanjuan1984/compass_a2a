@@ -62,11 +62,18 @@ class CompassAdapterExecutor(AgentExecutor):
             )
         )
 
-        invocation = parse_capability_invocation(
+        parse_result = parse_capability_invocation(
             metadata=context.metadata,
             user_input=user_input,
         )
-        if invocation is None:
+        if parse_result.error:
+            response_text = (
+                f"Authenticated identity: {identity}\n\n"
+                f"Capability contract error: {parse_result.error}\n\n"
+                f"{render_read_skill_help()}\n\n{render_write_command_help()}"
+            )
+            final_state = TaskState.failed
+        elif parse_result.invocation is None:
             response_text = (
                 f"Authenticated identity: {identity}\n"
                 f"Compass API base URL: {self._settings.compass_api_base_url}\n\n"
@@ -74,6 +81,7 @@ class CompassAdapterExecutor(AgentExecutor):
             )
             final_state = TaskState.completed
         else:
+            invocation = parse_result.invocation
             try:
                 if principal is None:
                     raise CompassGatewayError("Missing authenticated Compass principal")

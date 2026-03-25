@@ -220,5 +220,107 @@ def test_jsonrpc_message_send_routes_write_command_through_dedicated_path() -> N
     payload = response.json()
     assert payload["result"]["status"]["state"] == "failed"
     response_text = payload["result"]["artifacts"][0]["parts"][0]["text"]
-    assert "Write Command: create_note" in response_text
-    assert "write disabled: create_note" in response_text
+    assert "Capability contract error: Unsupported write command: create_note" in response_text
+    assert gateway.calls == []
+
+
+def test_jsonrpc_message_send_rejects_conflicting_skill_and_command_metadata() -> None:
+    gateway = FakeGateway()
+    client = _build_client(gateway)
+    request = SendMessageRequest(
+        id="req-4",
+        method="message/send",
+        params=MessageSendParams(
+            message=Message(
+                message_id="msg-4",
+                role=Role.user,
+                parts=[TextPart(text="review planning")],
+            ),
+            metadata={
+                "compass": {
+                    "skill": SKILL_REVIEW_PLANNING,
+                    "command": "create_note",
+                    "arguments": {"view_type": "day"},
+                }
+            },
+        ),
+    )
+
+    response = client.post(
+        "/",
+        json=request.model_dump(mode="json", by_alias=True),
+        headers=_auth_header("user@example.com", "secret"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["result"]["status"]["state"] == "failed"
+    response_text = payload["result"]["artifacts"][0]["parts"][0]["text"]
+    assert "Capability contract error:" in response_text
+    assert "must not provide both skill and command" in response_text
+    assert gateway.calls == []
+
+
+def test_jsonrpc_message_send_rejects_invalid_metadata_arguments_shape() -> None:
+    gateway = FakeGateway()
+    client = _build_client(gateway)
+    request = SendMessageRequest(
+        id="req-5",
+        method="message/send",
+        params=MessageSendParams(
+            message=Message(
+                message_id="msg-5",
+                role=Role.user,
+                parts=[TextPart(text="review planning")],
+            ),
+            metadata={
+                "compass": {
+                    "skill": SKILL_REVIEW_PLANNING,
+                    "arguments": ["day"],
+                }
+            },
+        ),
+    )
+
+    response = client.post(
+        "/",
+        json=request.model_dump(mode="json", by_alias=True),
+        headers=_auth_header("user@example.com", "secret"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["result"]["status"]["state"] == "failed"
+    response_text = payload["result"]["artifacts"][0]["parts"][0]["text"]
+    assert "Capability contract error: capability arguments must be an object" in response_text
+    assert gateway.calls == []
+
+
+def test_jsonrpc_message_send_rejects_invalid_slash_skill_payload() -> None:
+    gateway = FakeGateway()
+    client = _build_client(gateway)
+    request = SendMessageRequest(
+        id="req-6",
+        method="message/send",
+        params=MessageSendParams(
+            message=Message(
+                message_id="msg-6",
+                role=Role.user,
+                parts=[TextPart(text="/review_planning not-json")],
+            )
+        ),
+    )
+
+    response = client.post(
+        "/",
+        json=request.model_dump(mode="json", by_alias=True),
+        headers=_auth_header("user@example.com", "secret"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["result"]["status"]["state"] == "failed"
+    response_text = payload["result"]["artifacts"][0]["parts"][0]["text"]
+    assert "Capability contract error:" in response_text
+    assert "slash-style read skill arguments must be a JSON object" in response_text
+    assert gateway.calls == []

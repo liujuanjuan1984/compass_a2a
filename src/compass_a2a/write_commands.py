@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from .read_skills import CapabilityContractError
+
 SUPPORTED_WRITE_COMMANDS: frozenset[str] = frozenset()
 
 
@@ -22,12 +24,25 @@ def parse_write_command_invocation(
 
     command = compass_metadata.get("command")
     arguments = compass_metadata.get("arguments")
-    if not isinstance(command, str) or not command.strip():
+    if command is None:
         return None
+    if not isinstance(command, str) or not command.strip():
+        raise CapabilityContractError("metadata.compass.command must be a non-empty string")
+
+    normalized_command = command.strip()
+    if normalized_command not in SUPPORTED_WRITE_COMMANDS:
+        raise CapabilityContractError(f"Unsupported write command: {normalized_command}")
+
+    if arguments is None:
+        normalized_arguments: dict[str, Any] = {}
+    elif isinstance(arguments, dict):
+        normalized_arguments = dict(arguments)
+    else:
+        raise CapabilityContractError("capability arguments must be an object")
 
     return WriteCommandInvocation(
-        command=command.strip(),
-        arguments=arguments if isinstance(arguments, dict) else {},
+        command=normalized_command,
+        arguments=normalized_arguments,
     )
 
 

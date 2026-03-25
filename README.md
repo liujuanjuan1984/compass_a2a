@@ -57,6 +57,10 @@ expected by Compass, which is typically the account email.
 The adapter does not inject user personalization fields such as locale or time
 zone. Those preferences remain owned by Compass itself.
 
+Access tokens are cached in memory on a per-user basis, but they are no longer
+treated as unbounded session state. The adapter now applies token expiration,
+refresh skew, and cache size limits so expired or cold entries are recycled.
+
 ## Capability Model
 
 The current branch keeps a deliberate split between read skills and write
@@ -89,6 +93,14 @@ Recommended invocation style is metadata-driven:
   }
 }
 ```
+
+Contract rules for capability requests:
+
+- `metadata.compass` must be an object when provided
+- exactly one of `metadata.compass.skill` or `metadata.compass.command` may be set
+- `metadata.compass.arguments` must be a JSON object
+- slash-style read skill arguments must also be a JSON object
+- invalid capability contracts fail fast with an explicit adapter error instead of silently falling back to help text
 
 Future write commands will use a separate metadata field:
 

@@ -20,6 +20,12 @@ SUPPORTED_READ_SKILLS = {
     SKILL_REVIEW_VISION_FOCUS,
 }
 
+SUPPORTED_PLANNING_VIEW_TYPES = {"day", "week", "month", "year"}
+
+
+class CapabilityContractError(ValueError):
+    pass
+
 
 @dataclass(frozen=True)
 class ReadSkillInvocation:
@@ -36,10 +42,16 @@ def parse_read_skill_invocation(
     if isinstance(compass_metadata, dict):
         skill = compass_metadata.get("skill")
         arguments = compass_metadata.get("arguments")
-        if isinstance(skill, str) and skill in SUPPORTED_READ_SKILLS:
+        if skill is not None:
+            if not isinstance(skill, str) or not skill.strip():
+                raise CapabilityContractError("metadata.compass.skill must be a non-empty string")
+            normalized_skill = skill.strip()
+            if normalized_skill not in SUPPORTED_READ_SKILLS:
+                raise CapabilityContractError(f"Unsupported read skill: {normalized_skill}")
+            normalized_arguments = _normalize_arguments(arguments)
             return ReadSkillInvocation(
-                skill=skill,
-                arguments=arguments if isinstance(arguments, dict) else {},
+                skill=normalized_skill,
+                arguments=_validate_read_skill_arguments(normalized_skill, normalized_arguments),
             )
 
     stripped = user_input.strip()
@@ -49,17 +61,22 @@ def parse_read_skill_invocation(
     head, _, tail = stripped.partition(" ")
     skill = head[1:].strip()
     if skill not in SUPPORTED_READ_SKILLS:
-        return None
+        raise CapabilityContractError(f"Unsupported read skill: {skill}")
 
     if not tail.strip():
         return ReadSkillInvocation(skill=skill, arguments={})
 
     try:
         parsed = json.loads(tail)
-    except json.JSONDecodeError:
-        return ReadSkillInvocation(skill=skill, arguments={"raw_input": tail.strip()})
+    except json.JSONDecodeError as exc:
+        raise CapabilityContractError(
+            "slash-style read skill arguments must be a JSON object"
+        ) from exc
 
-    return ReadSkillInvocation(skill=skill, arguments=parsed if isinstance(parsed, dict) else {})
+    if not isinstance(parsed, dict):
+        raise CapabilityContractError("slash-style read skill arguments must be a JSON object")
+
+    return ReadSkillInvocation(skill=skill, arguments=_validate_read_skill_arguments(skill, parsed))
 
 
 def render_read_skill_help() -> str:
@@ -70,6 +87,44 @@ def render_read_skill_help() -> str:
         "slash-style text commands.\n\n"
         f"Available read skills: {skills}"
     )
+
+
+def _normalize_arguments(arguments: Any) -> dict[str, Any]:
+    if arguments is None:
+        return {}
+    if not isinstance(arguments, dict):
+        raise CapabilityContractError("capability arguments must be an object")
+    return dict(arguments)
+
+
+def _validate_read_skill_arguments(skill: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    if skill == SKILL_REVIEW_PLANNING:
+        view_type = arguments.get("view_type")
+        if view_type is not None:
+            if not isinstance(view_type, str) or view_type not in SUPPORTED_PLANNING_VIEW_TYPES:
+                allowed = "|".join(sorted(SUPPORTED_PLANNING_VIEW_TYPES))
+                raise CapabilityContractError(
+                    f"review_planning requires view_type={allowed} when provided"
+                )
+
+    if skill == SKILL_REVIEW_FINANCE_STATE:
+        target = arguments.get("target")
+        if target is not None:
+            if not isinstance(target, str) or target not in {"accounts", "cashflow", "trading"}:
+                raise CapabilityContractError(
+                    "review_finance_state requires target=accounts|cashflow|trading"
+                )
+
+    if skill == SKILL_REVIEW_VISION_FOCUS:
+        vision_id = arguments.get("vision_id")
+        if not isinstance(vision_id, str) or not vision_id.strip():
+            raise CapabilityContractError("review_vision_focus requires vision_id")
+        for field_name in ("include_subtasks", "include_notes", "include_time_records"):
+            value = arguments.get(field_name)
+            if value is not None and not isinstance(value, bool):
+                raise CapabilityContractError(f"review_vision_focus requires boolean {field_name}")
+
+    return arguments
 
 
 def build_read_skill_catalog() -> list[AgentSkill]:
