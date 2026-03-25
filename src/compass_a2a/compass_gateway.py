@@ -35,30 +35,21 @@ class CompassGateway:
         self, skill: str, arguments: dict[str, Any], principal: CompassPrincipal
     ) -> str:
         if skill == SKILL_REVIEW_TIME_AND_ACTIVITY:
-            payload = self._with_default_locale(arguments)
-            return await self._post_agentic("/agentic/timelog", payload, principal)
+            return await self._post_agentic("/agentic/timelog", dict(arguments), principal)
         if skill == SKILL_SEARCH_PERSONAL_KNOWLEDGE:
-            payload = self._with_default_locale(arguments)
-            return await self._post_agentic("/agentic/notes", payload, principal)
+            return await self._post_agentic("/agentic/notes", dict(arguments), principal)
         if skill == SKILL_REVIEW_PLANNING:
-            payload = self._with_default_locale(arguments)
-            return await self._post_agentic("/agentic/planning", payload, principal)
+            return await self._post_agentic("/agentic/planning", dict(arguments), principal)
         if skill == SKILL_REVIEW_FINANCE_STATE:
             target = arguments.get("target", "accounts")
             if target == "accounts":
-                payload = self._with_default_locale(
-                    {k: v for k, v in arguments.items() if k != "target"}
-                )
+                payload = {k: v for k, v in arguments.items() if k != "target"}
                 return await self._post_agentic("/agentic/finance/accounts", payload, principal)
             if target == "cashflow":
-                payload = self._with_default_locale(
-                    {k: v for k, v in arguments.items() if k != "target"}
-                )
+                payload = {k: v for k, v in arguments.items() if k != "target"}
                 return await self._post_agentic("/agentic/finance/cashflow", payload, principal)
             if target == "trading":
-                payload = self._with_default_locale(
-                    {k: v for k, v in arguments.items() if k != "target"}
-                )
+                payload = {k: v for k, v in arguments.items() if k != "target"}
                 return await self._post_agentic("/agentic/finance/trading", payload, principal)
             raise CompassGatewayError(
                 "review_finance_state requires target=accounts|cashflow|trading"
@@ -79,11 +70,6 @@ class CompassGateway:
             )
 
         raise CompassGatewayError(f"Unsupported skill: {skill}")
-
-    def _with_default_locale(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        payload = dict(arguments)
-        payload.setdefault("locale", self._settings.default_locale)
-        return payload
 
     async def _post_agentic(
         self, path: str, payload: dict[str, Any], principal: CompassPrincipal

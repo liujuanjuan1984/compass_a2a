@@ -54,6 +54,9 @@ Compass-facing logic can apply user-aware routing, token reuse, and policy.
 The Basic Auth username should match the Compass login identifier currently
 expected by Compass, which is typically the account email.
 
+The adapter does not inject user personalization fields such as locale or time
+zone. Those preferences remain owned by Compass itself.
+
 ## Compass Bootstrap Skills
 
 The current branch exposes a small bootstrap skill catalog while internally

@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     compass_api_base_url: str = "http://127.0.0.1:8000/api/v1"
-    default_locale: str = "zh-CN"
     protocol_version: str = "0.3.0"
     adapter_version: str = "0.1.0"
 

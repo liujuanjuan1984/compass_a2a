@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
@@ -110,3 +112,37 @@ async def test_gateway_caches_tokens_per_compass_principal(
         ("POST", "/auth/login", None),
         ("POST", "/agentic/planning", "Bearer bob-token"),
     ]
+
+
+@pytest.mark.anyio
+async def test_gateway_does_not_inject_default_locale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    planning_payloads: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/login":
+            return httpx.Response(200, json={"access_token": "planning-token"})
+
+        if request.url.path == "/agentic/planning":
+            planning_payloads.append(json.loads(request.content.decode()))
+            return httpx.Response(200, json={"content": "planning ok"})
+
+        return httpx.Response(500, json={"detail": "unexpected"})
+
+    transport = httpx.MockTransport(handler)
+    original_async_client = httpx.AsyncClient
+
+    def build_client(*args, **kwargs):  # noqa: ANN001, ANN202
+        kwargs["transport"] = transport
+        return original_async_client(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", build_client)
+
+    gateway = CompassGateway(Settings(compass_api_base_url="http://compass.test"))
+    principal = CompassPrincipal(username="user@example.com", password="secret")
+
+    await gateway.authenticate(principal)
+    await gateway.invoke("review_planning", {"view_type": "day"}, principal)
+
+    assert planning_payloads == [{"view_type": "day"}]
