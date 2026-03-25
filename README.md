@@ -61,6 +61,12 @@ Access tokens are cached in memory on a per-user basis, but they are no longer
 treated as unbounded session state. The adapter now applies token expiration,
 refresh skew, and cache size limits so expired or cold entries are recycled.
 
+Optional cache tuning env vars:
+
+- `COMPASS_A2A_TOKEN_CACHE_TTL_SECONDS`
+- `COMPASS_A2A_TOKEN_CACHE_REFRESH_SKEW_SECONDS`
+- `COMPASS_A2A_TOKEN_CACHE_MAX_ENTRIES`
+
 ## Capability Model
 
 The current branch keeps a deliberate split between read skills and write
