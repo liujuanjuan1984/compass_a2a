@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "compass_a2a"
+    app_name: str = "compass-a2a"
     host: str = "127.0.0.1"
     port: int = 8000
     public_url: str = "http://127.0.0.1:8000"
@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     compass_api_base_url: str = "http://127.0.0.1:8000/api/v1"
     protocol_version: str = "0.3.0"
     adapter_version: str = "0.1.0"
+    token_cache_ttl_seconds: int = 900
+    token_cache_refresh_skew_seconds: int = 60
+    token_cache_max_entries: int = 256
 
     model_config = SettingsConfigDict(
         env_file=".env",

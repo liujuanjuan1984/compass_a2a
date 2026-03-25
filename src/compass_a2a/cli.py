@@ -10,7 +10,7 @@ from .config import Settings
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="compass-a2a",
-        description="Run the Compass A2A adapter service.",
+        description="Run the compass-a2a adapter service.",
     )
     parser.add_argument("--host", help="Host override.")
     parser.add_argument("--port", type=int, help="Port override.")

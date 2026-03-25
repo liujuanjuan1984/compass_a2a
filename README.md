@@ -1,11 +1,11 @@
-# compass_a2a
+# compass-a2a
 
-`compass_a2a` is the dedicated A2A adapter service for Compass.
+`compass-a2a` is the dedicated A2A adapter service for Compass.
 
 It is intentionally positioned as a separate process boundary:
 
 - Compass stays the source of truth for LifeOS data and domain rules.
-- `compass_a2a` exposes an A2A-facing runtime surface for hub and peer agents.
+- `compass-a2a` exposes an A2A-facing runtime surface for hub and peer agents.
 - The adapter can evolve independently from Compass internals.
 
 ## Bootstrap Scope
@@ -57,10 +57,27 @@ expected by Compass, which is typically the account email.
 The adapter does not inject user personalization fields such as locale or time
 zone. Those preferences remain owned by Compass itself.
 
-## Compass Bootstrap Skills
+Access tokens are cached in memory on a per-user basis, but they are no longer
+treated as unbounded session state. The adapter now applies token expiration,
+refresh skew, and cache size limits so expired or cold entries are recycled.
 
-The current branch exposes a small bootstrap skill catalog while internally
-using Compass `/agentic/*` facade endpoints as the initial data source.
+Optional cache tuning env vars:
+
+- `COMPASS_A2A_TOKEN_CACHE_TTL_SECONDS`
+- `COMPASS_A2A_TOKEN_CACHE_REFRESH_SKEW_SECONDS`
+- `COMPASS_A2A_TOKEN_CACHE_MAX_ENTRIES`
+
+## Capability Model
+
+The current branch keeps a deliberate split between read skills and write
+commands.
+
+- Read skills are the current public capability surface.
+- Write commands are reserved for approval-aware mutations and have a separate
+  execution path, even though no write commands are enabled yet.
+
+The current bootstrap skill catalog internally uses Compass `/agentic/*` facade
+endpoints as the initial data source.
 
 - `review_time_and_activity`
 - `search_personal_knowledge`
@@ -83,6 +100,27 @@ Recommended invocation style is metadata-driven:
 }
 ```
 
+Contract rules for capability requests:
+
+- `metadata.compass` must be an object when provided
+- exactly one of `metadata.compass.skill` or `metadata.compass.command` may be set
+- `metadata.compass.arguments` must be a JSON object
+- slash-style read skill arguments must also be a JSON object
+- invalid capability contracts fail fast with an explicit adapter error instead of silently falling back to help text
+
+Future write commands will use a separate metadata field:
+
+```json
+{
+  "compass": {
+    "command": "create_note",
+    "arguments": {
+      "title": "Draft"
+    }
+  }
+}
+```
+
 For quick manual testing, slash-style text commands also work:
 
 ```text
@@ -91,7 +129,7 @@ For quick manual testing, slash-style text commands also work:
 
 These Compass endpoints are treated as an internal bootstrap gateway, not as
 the long-term external A2A contract. Authentication is also bridged through
-Compass itself, so `compass_a2a` remains a thin protocol and policy layer.
+Compass itself, so `compass-a2a` remains a thin protocol and policy layer.
 
 ## Development
 
@@ -113,7 +151,7 @@ bash ./scripts/smoke_test_built_cli.sh dist/compass_a2a-*.tar.gz
 
 ## Release
 
-`compass_a2a` uses tag-driven releases.
+`compass-a2a` uses tag-driven releases.
 
 - Merge the release-ready commit into `master`
 - Create and push a version tag in the form `vX.Y.Z`
