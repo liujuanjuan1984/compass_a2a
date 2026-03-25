@@ -35,10 +35,10 @@ uv tool upgrade compass-a2a
 Run (complete example)
 
 ```bash
- A2A_HOST=0.0.0.0 \
- A2A_PORT=8000 \
- A2A_PUBLIC_URL=http://127.0.0.1:8000 \
- A2A_COMPASS_API_BASE_URL=http://127.0.0.1:8000/api/v1 \
+A2A_HOST=0.0.0.0 \
+A2A_PORT=8000 \
+A2A_PUBLIC_URL=https://your-domain.example.com/compass-a2a \
+A2A_COMPASS_API_BASE_URL=https://your-domain.example.com/api/v1 \
 compass-a2a
 ```
 
