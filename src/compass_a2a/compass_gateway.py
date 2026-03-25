@@ -7,7 +7,7 @@ import httpx
 
 from .config import Settings
 from .principal import CompassPrincipal
-from .skills import (
+from .read_skills import (
     SKILL_REVIEW_FINANCE_STATE,
     SKILL_REVIEW_PLANNING,
     SKILL_REVIEW_TIME_AND_ACTIVITY,
@@ -31,7 +31,7 @@ class CompassGateway:
         principal.access_token = await self._ensure_access_token(principal)
         return principal
 
-    async def invoke(
+    async def invoke_read_skill(
         self, skill: str, arguments: dict[str, Any], principal: CompassPrincipal
     ) -> str:
         if skill == SKILL_REVIEW_TIME_AND_ACTIVITY:
@@ -70,6 +70,12 @@ class CompassGateway:
             )
 
         raise CompassGatewayError(f"Unsupported skill: {skill}")
+
+    async def execute_write_command(
+        self, command: str, arguments: dict[str, Any], principal: CompassPrincipal
+    ) -> str:
+        del arguments, principal
+        raise CompassGatewayError(f"Write command execution is not enabled yet: {command}")
 
     async def _post_agentic(
         self, path: str, payload: dict[str, Any], principal: CompassPrincipal

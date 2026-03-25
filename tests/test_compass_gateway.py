@@ -45,7 +45,7 @@ async def test_gateway_reauthenticates_after_unauthorized(monkeypatch: pytest.Mo
 
     await gateway.authenticate(principal)
 
-    content = await gateway.invoke("review_planning", {"view_type": "day"}, principal)
+    content = await gateway.invoke_read_skill("review_planning", {"view_type": "day"}, principal)
 
     assert content == "planning ok"
     assert requests_seen == [
@@ -95,14 +95,14 @@ async def test_gateway_caches_tokens_per_compass_principal(
 
     await gateway.authenticate(alice_first)
     await gateway.authenticate(alice_second)
-    alice_content = await gateway.invoke(
+    alice_content = await gateway.invoke_read_skill(
         "review_planning",
         {"view_type": "day"},
         alice_second,
     )
 
     await gateway.authenticate(bob)
-    bob_content = await gateway.invoke("review_planning", {"view_type": "week"}, bob)
+    bob_content = await gateway.invoke_read_skill("review_planning", {"view_type": "week"}, bob)
 
     assert alice_content == "Bearer alice-token"
     assert bob_content == "Bearer bob-token"
@@ -143,6 +143,6 @@ async def test_gateway_does_not_inject_default_locale(
     principal = CompassPrincipal(username="user@example.com", password="secret")
 
     await gateway.authenticate(principal)
-    await gateway.invoke("review_planning", {"view_type": "day"}, principal)
+    await gateway.invoke_read_skill("review_planning", {"view_type": "day"}, principal)
 
     assert planning_payloads == [{"view_type": "day"}]

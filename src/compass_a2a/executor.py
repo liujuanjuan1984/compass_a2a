@@ -15,20 +15,26 @@ from a2a.types import (
     TextPart,
 )
 
+from .capabilities import parse_capability_invocation
 from .compass_gateway import CompassGatewayError
 from .config import Settings
 from .principal import CompassPrincipal
-from .skills import parse_skill_invocation, render_skill_help
+from .read_skills import render_read_skill_help
+from .write_commands import render_write_command_help
 
 
-class SkillGateway(Protocol):
-    async def invoke(
+class CapabilityGateway(Protocol):
+    async def invoke_read_skill(
         self, skill: str, arguments: dict[str, object], principal: CompassPrincipal
+    ) -> str: ...
+
+    async def execute_write_command(
+        self, command: str, arguments: dict[str, object], principal: CompassPrincipal
     ) -> str: ...
 
 
 class CompassAdapterExecutor(AgentExecutor):
-    def __init__(self, settings: Settings, gateway: SkillGateway) -> None:
+    def __init__(self, settings: Settings, gateway: CapabilityGateway) -> None:
         self._settings = settings
         self._gateway = gateway
 
@@ -56,30 +62,40 @@ class CompassAdapterExecutor(AgentExecutor):
             )
         )
 
-        invocation = parse_skill_invocation(metadata=context.metadata, user_input=user_input)
+        invocation = parse_capability_invocation(
+            metadata=context.metadata,
+            user_input=user_input,
+        )
         if invocation is None:
             response_text = (
                 f"Authenticated identity: {identity}\n"
                 f"Compass API base URL: {self._settings.compass_api_base_url}\n\n"
-                f"{render_skill_help()}"
+                f"{render_read_skill_help()}\n\n{render_write_command_help()}"
             )
             final_state = TaskState.completed
         else:
             try:
                 if principal is None:
                     raise CompassGatewayError("Missing authenticated Compass principal")
-                content = await self._gateway.invoke(
-                    invocation.skill,
-                    invocation.arguments,
-                    principal,
-                )
-                response_text = (
-                    f"Skill: {invocation.skill}\nAuthenticated identity: {identity}\n\n{content}"
-                )
+                if invocation.kind == "read_skill":
+                    content = await self._gateway.invoke_read_skill(
+                        invocation.name,
+                        invocation.arguments,
+                        principal,
+                    )
+                    action_label = f"Read skill: {invocation.name}"
+                else:
+                    content = await self._gateway.execute_write_command(
+                        invocation.name,
+                        invocation.arguments,
+                        principal,
+                    )
+                    action_label = f"Write command: {invocation.name}"
+                response_text = f"{action_label}\nAuthenticated identity: {identity}\n\n{content}"
                 final_state = TaskState.completed
             except CompassGatewayError as exc:
                 response_text = (
-                    f"Skill: {invocation.skill}\n"
+                    f"{invocation.kind.replace('_', ' ').title()}: {invocation.name}\n"
                     f"Authenticated identity: {identity}\n\n"
                     f"Compass gateway error: {exc}"
                 )

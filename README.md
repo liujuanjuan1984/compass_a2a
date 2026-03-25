@@ -57,10 +57,17 @@ expected by Compass, which is typically the account email.
 The adapter does not inject user personalization fields such as locale or time
 zone. Those preferences remain owned by Compass itself.
 
-## Compass Bootstrap Skills
+## Capability Model
 
-The current branch exposes a small bootstrap skill catalog while internally
-using Compass `/agentic/*` facade endpoints as the initial data source.
+The current branch keeps a deliberate split between read skills and write
+commands.
+
+- Read skills are the current public capability surface.
+- Write commands are reserved for approval-aware mutations and have a separate
+  execution path, even though no write commands are enabled yet.
+
+The current bootstrap skill catalog internally uses Compass `/agentic/*` facade
+endpoints as the initial data source.
 
 - `review_time_and_activity`
 - `search_personal_knowledge`
@@ -78,6 +85,19 @@ Recommended invocation style is metadata-driven:
       "view_type": "day",
       "selected_date": "2026-03-25T00:00:00Z",
       "include_notes": true
+    }
+  }
+}
+```
+
+Future write commands will use a separate metadata field:
+
+```json
+{
+  "compass": {
+    "command": "create_note",
+    "arguments": {
+      "title": "Draft"
     }
   }
 }
