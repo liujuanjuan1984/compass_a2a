@@ -44,6 +44,13 @@ compass-a2a
 
 `A2A_COMPASS_API_BASE_URL` is required and should point to the upstream Compass API service used for identity, skill dispatch, and token exchange.
 
+Required environment variables:
+
+- `A2A_HOST`
+- `A2A_PORT`
+- `A2A_PUBLIC_URL`
+- `A2A_COMPASS_API_BASE_URL`
+
 Public endpoints:
 
 - `GET /.well-known/agent-card.json`
