@@ -20,14 +20,36 @@ This repository is initialized with:
 
 ## Quick Start
 
+Install
+
 ```bash
-uv sync --extra dev
-cp .env.example .env
-uv run pre-commit install
-uv run compass-a2a
+uv tool install compass-a2a
 ```
 
-By default the server listens on `http://127.0.0.1:8000`.
+Upgrade
+
+```bash
+uv tool upgrade compass-a2a
+```
+
+Run (complete example)
+
+```bash
+A2A_HOST=0.0.0.0 \
+A2A_PORT=8000 \
+A2A_PUBLIC_URL=https://your-domain.example.com/compass-a2a \
+A2A_COMPASS_API_BASE_URL=https://your-domain.example.com/api/v1 \
+compass-a2a
+```
+
+`A2A_COMPASS_API_BASE_URL` is required and should point to the upstream Compass API service used for identity, skill dispatch, and token exchange.
+
+Required environment variables:
+
+- `A2A_HOST`
+- `A2A_PORT`
+- `A2A_PUBLIC_URL`
+- `A2A_COMPASS_API_BASE_URL`
 
 Public endpoints:
 
@@ -63,9 +85,9 @@ refresh skew, and cache size limits so expired or cold entries are recycled.
 
 Optional cache tuning env vars:
 
-- `COMPASS_A2A_TOKEN_CACHE_TTL_SECONDS`
-- `COMPASS_A2A_TOKEN_CACHE_REFRESH_SKEW_SECONDS`
-- `COMPASS_A2A_TOKEN_CACHE_MAX_ENTRIES`
+- `A2A_TOKEN_CACHE_TTL_SECONDS`
+- `A2A_TOKEN_CACHE_REFRESH_SKEW_SECONDS`
+- `A2A_TOKEN_CACHE_MAX_ENTRIES`
 
 ## Capability Model
 
