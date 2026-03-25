@@ -1,0 +1,106 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure tag commit is on master
+        run: |
+          git fetch origin master
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/master"; then
+            echo "Tag ${GITHUB_REF_NAME} does not point to a commit on origin/master" >&2
+            exit 1
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+
+      - name: Sync dependencies
+        run: uv sync --extra dev --frozen
+
+      - name: Run regression baseline
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pytest
+
+      - name: Export runtime requirements for vulnerability audit
+        run: >
+          uv export --format requirements.txt --no-dev --locked --no-emit-project
+          --output-file /tmp/runtime-requirements.txt >/dev/null
+
+      - name: Run runtime dependency vulnerability audit
+        run: uv run pip-audit --requirement /tmp/runtime-requirements.txt
+
+      - name: Clean previous build artifacts
+        run: rm -rf build dist
+
+      - name: Build package artifacts
+        run: uv build --no-sources
+
+      - name: Verify published version matches tag
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+
+          dist_dir = pathlib.Path("dist")
+          wheels = sorted(dist_dir.glob("compass_a2a-*.whl"))
+          sdists = sorted(dist_dir.glob("compass_a2a-*.tar.gz"))
+          if len(wheels) != 1:
+              raise SystemExit(f"Expected exactly one wheel in dist/, found {len(wheels)}")
+          if len(sdists) != 1:
+              raise SystemExit(f"Expected exactly one sdist in dist/, found {len(sdists)}")
+          wheel = wheels[0].name
+          sdist = sdists[0].name
+          version = wheel.removeprefix("compass_a2a-").split("-py3", 1)[0]
+          sdist_version = sdist.removeprefix("compass_a2a-").removesuffix(".tar.gz")
+          tag = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          if version != tag:
+              raise SystemExit(f"Wheel version {version!r} does not match tag {tag!r}")
+          if sdist_version != tag:
+              raise SystemExit(f"sdist version {sdist_version!r} does not match tag {tag!r}")
+          print(f"Validated release version: {version}")
+          PY
+
+      - name: Smoke test wheel install
+        run: bash ./scripts/smoke_test_built_cli.sh dist/compass_a2a-*.whl
+
+      - name: Smoke test sdist install
+        run: bash ./scripts/smoke_test_built_cli.sh dist/compass_a2a-*.tar.gz
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/*.whl
