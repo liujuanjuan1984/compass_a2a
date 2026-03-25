@@ -67,9 +67,9 @@ with socket.socket() as sock:
 PY
 )"
 
-COMPASS_A2A_PORT="${port}" \
-COMPASS_A2A_HOST="127.0.0.1" \
-COMPASS_A2A_COMPASS_API_BASE_URL="http://127.0.0.1:${port}/api/v1" \
+A2A_PORT="${port}" \
+A2A_HOST="127.0.0.1" \
+A2A_COMPASS_API_BASE_URL="http://127.0.0.1:${port}/api/v1" \
 "${tool_bin_dir}/compass-a2a" >"${server_log}" 2>&1 &
 server_pid="$!"
 

@@ -14,7 +14,7 @@ from .read_skills import build_read_skill_catalog
 
 
 def build_agent_card(settings: Settings) -> AgentCard:
-    base_url = settings.public_url.rstrip("/")
+    base_url = (settings.public_url or f"http://{settings.host}:{settings.port}").rstrip("/")
     return AgentCard(
         name="compass-a2a",
         description=(

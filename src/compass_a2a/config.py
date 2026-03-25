@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     app_name: str = "compass-a2a"
     host: str = "127.0.0.1"
     port: int = 8000
-    public_url: str = "http://127.0.0.1:8000"
+    public_url: str | None = None
     log_level: str = "INFO"
 
     compass_api_base_url: str = "http://127.0.0.1:8000/api/v1"
@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     token_cache_max_entries: int = 256
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="COMPASS_A2A_",
+        env_prefix="A2A_",
         extra="ignore",
     )

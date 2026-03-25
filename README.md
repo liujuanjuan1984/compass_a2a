@@ -20,14 +20,38 @@ This repository is initialized with:
 
 ## Quick Start
 
+Install and run from a release with `uv tool`:
+
 ```bash
-uv sync --extra dev
-cp .env.example .env
-uv run pre-commit install
-uv run compass-a2a
+uv tool install compass-a2a
+compass-a2a
 ```
 
-By default the server listens on `http://127.0.0.1:8000`.
+By default, the service listens on `http://127.0.0.1:8000`, and the Agent Card URL
+is generated from the startup `host:port`.
+
+For a complete launch example:
+
+```bash
+A2A_HOST=127.0.0.1 \
+A2A_PORT=8000 \
+compass-a2a
+```
+
+If the service is exposed through a public endpoint, set `A2A_PUBLIC_URL` explicitly:
+
+```bash
+A2A_HOST=0.0.0.0 \
+A2A_PORT=8000 \
+A2A_PUBLIC_URL=http://public.example.com/compass-a2a \
+compass-a2a
+```
+
+`uv tool upgrade` can be used to keep the installed tool up to date:
+
+```bash
+uv tool upgrade compass-a2a
+```
 
 Public endpoints:
 
@@ -63,9 +87,9 @@ refresh skew, and cache size limits so expired or cold entries are recycled.
 
 Optional cache tuning env vars:
 
-- `COMPASS_A2A_TOKEN_CACHE_TTL_SECONDS`
-- `COMPASS_A2A_TOKEN_CACHE_REFRESH_SKEW_SECONDS`
-- `COMPASS_A2A_TOKEN_CACHE_MAX_ENTRIES`
+- `A2A_TOKEN_CACHE_TTL_SECONDS`
+- `A2A_TOKEN_CACHE_REFRESH_SKEW_SECONDS`
+- `A2A_TOKEN_CACHE_MAX_ENTRIES`
 
 ## Capability Model
 
