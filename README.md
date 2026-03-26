@@ -35,15 +35,12 @@ uv tool upgrade compass-a2a
 Run (complete example)
 
 ```bash
-export A2A_HOST=0.0.0.0
-export A2A_PORT=8000
-export A2A_PUBLIC_URL=https://your-domain.example.com/compass-a2a
-export A2A_COMPASS_API_BASE_URL=https://your-domain.example.com/api/v1
-
+A2A_HOST=0.0.0.0 \
+A2A_PORT=8000 \
+A2A_PUBLIC_URL=https://your-domain.example.com/compass-a2a \
+A2A_COMPASS_API_BASE_URL=https://your-domain.example.com/api/v1 \
 compass-a2a
 ```
-
-Use environment variable assignment only this way; this is required for a shell script or process manager to pass values into the `compass-a2a` process.
 
 `A2A_COMPASS_API_BASE_URL` is required and should point to the upstream Compass API service used for identity, skill dispatch, and token exchange.
 
