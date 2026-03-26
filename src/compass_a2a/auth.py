@@ -70,6 +70,5 @@ def add_basic_auth_middleware(app: FastAPI, authenticator: CompassAuthenticator)
         except CompassGatewayError:
             return _unauthorized_response()
 
-        request.state.user_identity = principal.identity
         request.state.compass_principal = principal
         return await call_next(request)

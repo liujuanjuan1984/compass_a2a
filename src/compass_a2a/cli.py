@@ -5,8 +5,6 @@ from .config import Settings
 
 def main() -> int:
     settings = Settings()
-    if settings.public_url is None:
-        settings.public_url = f"http://{settings.host}:{settings.port}"
 
     uvicorn.run(
         "compass_a2a.app:build_app",

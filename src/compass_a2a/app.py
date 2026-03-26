@@ -15,12 +15,9 @@ from .executor import CompassAdapterExecutor
 from .principal import CompassPrincipal
 
 
-class IdentityAwareCallContextBuilder(DefaultCallContextBuilder):
+class PrincipalAwareCallContextBuilder(DefaultCallContextBuilder):
     def build(self, request: Request):
         context = super().build(request)
-        identity = getattr(request.state, "user_identity", None)
-        if identity:
-            context.state["identity"] = identity
         principal = getattr(request.state, "compass_principal", None)
         if isinstance(principal, CompassPrincipal):
             context.state["compass_principal"] = principal
@@ -38,7 +35,7 @@ def build_app(
         agent_executor=CompassAdapterExecutor(settings, gateway),
         task_store=InMemoryTaskStore(),
     )
-    context_builder = IdentityAwareCallContextBuilder()
+    context_builder = PrincipalAwareCallContextBuilder()
 
     app = A2AFastAPI(title=settings.app_name, version=settings.adapter_version)
     app.get("/healthz")(lambda: {"status": "ok"})
