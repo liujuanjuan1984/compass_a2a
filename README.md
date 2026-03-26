@@ -1,38 +1,37 @@
 # compass-a2a
 
-`compass-a2a` is the dedicated A2A adapter service for Compass.
+> Expose Compass through A2A.
 
-It is intentionally positioned as a separate process boundary:
+`compass-a2a` is a thin A2A adapter in front of Compass.
 
-- Compass stays the source of truth for LifeOS data and domain rules.
-- `compass-a2a` exposes an A2A-facing runtime surface for hub and peer agents.
-- The adapter can evolve independently from Compass internals.
+It exists to keep a clean service boundary:
 
-## Bootstrap Scope
+- Compass remains the source of truth for identity, data, and domain rules.
+- `compass-a2a` exposes an authenticated A2A surface for hub and peer agents.
+- The adapter can evolve independently without coupling external A2A clients to Compass internals.
 
-This repository is initialized with:
+## What This Is
 
-- `uv` for dependency and environment management
-- `pre-commit` for basic code quality checks
-- a minimal A2A server surface
-- a public agent card endpoint
+- An A2A server for Compass-oriented capabilities
+- A public agent card plus JSON-RPC and HTTP+JSON A2A endpoints
 - HTTP Basic authentication bridged to Compass account credentials
+- A read-focused capability layer backed by Compass `/agentic/*` exports
 
 ## Quick Start
 
-Install
+Install the released CLI with `uv tool`:
 
 ```bash
 uv tool install compass-a2a
 ```
 
-Upgrade
+Upgrade later with:
 
 ```bash
 uv tool upgrade compass-a2a
 ```
 
-Run (complete example)
+Then start `compass-a2a` against your Compass API:
 
 ```bash
 A2A_HOST=0.0.0.0 \
@@ -42,70 +41,42 @@ A2A_COMPASS_API_BASE_URL=https://your-domain.example.com/api/v1 \
 compass-a2a
 ```
 
-`A2A_COMPASS_API_BASE_URL` is required and should point to the upstream Compass API service used for identity, skill dispatch, and token exchange.
+`A2A_COMPASS_API_BASE_URL` should point to the upstream Compass API used for
+login, token exchange, and capability dispatch.
 
-Required environment variables:
+Verify that the service is up:
+
+```bash
+curl http://127.0.0.1:8000/.well-known/agent-card.json
+curl http://127.0.0.1:8000/healthz
+```
+
+Common runtime settings:
 
 - `A2A_HOST`
 - `A2A_PORT`
 - `A2A_PUBLIC_URL`
 - `A2A_COMPASS_API_BASE_URL`
 
-Public endpoints:
-
-- `GET /.well-known/agent-card.json`
-- `GET /.well-known/agent.json`
-- `GET /healthz`
-
-Protected endpoints:
-
-- `POST /`
-- `POST /v1/message:send`
-- `POST /v1/message:stream`
-- `GET /v1/card`
-
-## Authentication
-
-Runtime access uses HTTP Basic authentication.
-
-The adapter does not maintain its own account system. Instead, the Basic Auth
-username and password are treated as Compass login credentials. The current
-authenticated Compass identity is propagated into the request context so later
-Compass-facing logic can apply user-aware routing, token reuse, and policy.
-
-The Basic Auth username should match the Compass login identifier currently
-expected by Compass, which is typically the account email.
-
-The adapter does not inject user personalization fields such as locale or time
-zone. Those preferences remain owned by Compass itself.
-
-Access tokens are cached in memory on a per-user basis, but they are no longer
-treated as unbounded session state. The adapter now applies token expiration,
-refresh skew, and cache size limits so expired or cold entries are recycled.
-
-Optional cache tuning env vars:
+Optional token cache tuning:
 
 - `A2A_TOKEN_CACHE_TTL_SECONDS`
 - `A2A_TOKEN_CACHE_REFRESH_SKEW_SECONDS`
 - `A2A_TOKEN_CACHE_MAX_ENTRIES`
 
-## Capability Model
+## Authentication
 
-The current branch keeps a deliberate split between read skills and write
-commands.
+Inbound runtime access uses HTTP Basic authentication.
 
-- Read skills are the current public capability surface.
-- Write commands are reserved for approval-aware mutations and have a separate
-  execution path, even though no write commands are enabled yet.
+- The Basic Auth username and password are treated as Compass login credentials.
+- The adapter does not maintain a separate user system.
+- The authenticated Compass principal is reused for later Compass-facing calls.
+- Compass-owned personalization such as locale or time zone stays on the Compass side.
 
-The current bootstrap skill catalog internally uses Compass `/agentic/*` facade
-endpoints as the initial data source.
+Access tokens are cached in memory per authenticated user, with expiration,
+refresh skew, and cache size limits to avoid unbounded session growth.
 
-- `review_time_and_activity`
-- `search_personal_knowledge`
-- `review_planning`
-- `review_finance_state`
-- `review_vision_focus`
+## Calling The Adapter
 
 Recommended invocation style is metadata-driven:
 
@@ -122,40 +93,73 @@ Recommended invocation style is metadata-driven:
 }
 ```
 
-Contract rules for capability requests:
-
-- `metadata.compass` must be an object when provided
-- exactly one of `metadata.compass.skill` or `metadata.compass.command` may be set
-- `metadata.compass.arguments` must be a JSON object
-- slash-style read skill arguments must also be a JSON object
-- invalid capability contracts fail fast with an explicit adapter error instead of silently falling back to help text
-
-Future write commands will use a separate metadata field:
-
-```json
-{
-  "compass": {
-    "command": "create_note",
-    "arguments": {
-      "title": "Draft"
-    }
-  }
-}
-```
-
-For quick manual testing, slash-style text commands also work:
+For quick manual testing, slash-style read skill commands also work:
 
 ```text
 /review_time_and_activity {"start_date":"2026-03-25T00:00:00Z","end_date":"2026-03-25T23:59:59Z"}
 ```
 
-These Compass endpoints are treated as an internal bootstrap gateway, not as
-the long-term external A2A contract. Authentication is also bridged through
-Compass itself, so `compass-a2a` remains a thin protocol and policy layer.
+Current contract rules:
+
+- `metadata.compass` must be an object when provided
+- exactly one of `metadata.compass.skill` or `metadata.compass.command` may be set
+- `metadata.compass.arguments` must be a JSON object
+- slash-style read skill arguments must be a JSON object
+- invalid capability contracts fail fast with an explicit adapter error
+
+Plain text without `metadata.compass.*` or a slash-style command is accepted,
+but it currently falls back to capability help text. The adapter does not yet
+perform natural-language intent routing.
+
+## Current Read Skills
+
+The current public skill surface is read-only:
+
+- `review_time_and_activity`
+- `search_personal_knowledge`
+- `review_planning`
+- `review_finance_state`
+- `review_vision_focus`
+
+Write commands keep a separate execution path for future approval-aware
+mutations, but no write commands are enabled yet.
+
+## Public Surface
+
+Public endpoints:
+
+- `GET /.well-known/agent-card.json`
+- `GET /.well-known/agent.json`
+- `GET /healthz`
+
+Protected endpoints:
+
+- `POST /`
+- `POST /v1/message:send`
+- `POST /v1/message:stream`
+- `GET /v1/card`
+
+The adapter advertises both `JSONRPC` and `HTTP+JSON` transports through the
+agent card.
+
+## When To Use It
+
+Use this project when:
+
+- you want Compass capabilities exposed through a standard A2A surface
+- you want authentication to remain anchored to Compass accounts
+- you want a thin adapter instead of embedding A2A concerns inside Compass
+
+Look elsewhere if:
+
+- you need a free-form chat relay backed by Compass chat
+- you need durable session storage or long-lived task orchestration
+- you need approval-enabled write workflows today
+- you want hard multi-tenant isolation inside one shared runtime
 
 ## Development
 
-Run checks:
+Run local checks:
 
 ```bash
 uv run pytest
@@ -173,23 +177,9 @@ bash ./scripts/smoke_test_built_cli.sh dist/compass_a2a-*.tar.gz
 
 ## Release
 
-`compass-a2a` uses tag-driven releases.
+`compass-a2a` uses tag-driven releases:
 
-- Merge the release-ready commit into `master`
-- Create and push a version tag in the form `vX.Y.Z`
-- The publish workflow will only proceed when the tag commit is reachable from `origin/master`
-- The workflow builds artifacts, verifies that the package version matches the tag, publishes to PyPI, and creates a GitHub Release
-
-PyPI publishing is configured for GitHub OIDC trusted publishing. The PyPI
-project must trust this repository and the `publish.yml` workflow before the
-first release can succeed.
-
-## Roadmap
-
-This bootstrap intentionally keeps the runtime thin. The next steps are expected
-to include:
-
-- Compass API integration
-- approval-aware write operations
-- richer task execution and streaming behavior
-- durable task/session storage
+- merge the release-ready commit into `master`
+- create and push a version tag in the form `vX.Y.Z`
+- publish only from tag commits reachable from `origin/master`
+- let the publish workflow build, verify, and release the package
